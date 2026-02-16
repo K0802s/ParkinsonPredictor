@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parkinson's ML Detection</title>
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #4caf50;
+            --error-color: #f44336;
+            --warning-color: #ff9800;
+            --accent-hover: #5a67d8;
+            
+            /* Light theme */
+            --bg-light: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --container-bg-light: rgba(255, 255, 255, 0.95);
+            --text-primary-light: #333;
+            --text-secondary-light: #666;
+            --input-bg-light: white;
+            --input-border-light: #e0e0e0;
+            --card-bg-light: white;
+            --shadow-light: 0 4px 20px rgba(0, 0, 0, 0.1);
+            
+            /* Dark theme */
+            --bg-dark: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            --container-bg-dark: rgba(30, 30, 50, 0.95);
+            --text-primary-dark: #e0e0e0;
+            --text-secondary-dark: #b0b0b0;
+            --input-bg-dark: #2a2a3e;
+            --input-border-dark: #4a4a6e;
+            --card-bg-dark: #2a2a3e;
+            --shadow-dark: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-light);
+            min-height: 100vh;
+            transition: all 0.3s ease;
+            color: var(--text-primary-light);
+        }
+
+        body.dark-mode {
+            background: var(--bg-dark);
+            color: var(--text-primary-dark);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 15px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: var(--container-bg-light);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: var(--shadow-light);
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .header {
+            background: var(--container-bg-dark);
+            box-shadow: var(--shadow-dark);
+        }
+
+        .header-content h1 {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+
+        .header-content p {
+            font-size: 0.9em;
+            color: var(--text-secondary-light);
+            transition: color 0.3s ease;
+        }
+
+        body.dark-mode .header-content p {
+            color: var(--text-secondary-dark);
+        }
+
+        .theme-toggle {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background: var(--accent-hover);
+            transform: scale(1.1);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .card {
+            background: var(--container-bg-light);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: var(--shadow-light);
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .card {
+            background: var(--container-bg-dark);
+            box-shadow: var(--shadow-dark);
+        }
+
+        .card-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .model-selection {
+            margin-bottom: 15px;
+        }
+
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .model-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 10px;
+            background: var(--card-bg-light);
+            border: 2px solid var(--input-border-light);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85em;
+        }
+
+        body.dark-mode .model-checkbox {
+            background: var(--card-bg-dark);
+            border-color: var(--input-border-dark);
+        }
+
+        .model-checkbox:hover {
+            border-color: var(--primary-color);
+        }
+
+        .model-checkbox.selected {
+            border-color: var(--primary-color);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .model-checkbox input[type="checkbox"] {
+            margin: 0;
+        }
+
+        .input-section {
+            flex: 1;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 8px;
+            max-height: 350px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid var(--input-border-light);
+            border-radius: 8px;
+            background: var(--card-bg-light);
+            margin-bottom: 15px;
+        }
+
+        body.dark-mode .input-grid {
+            border-color: var(--input-border-dark);
+            background: var(--card-bg-dark);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            font-size: 0.7em;
+            color: var(--text-primary-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        body.dark-mode .input-group label {
+            color: var(--text-primary-dark);
+        }
+
+        .input-group input {
+            padding: 6px 8px;
+            border: 1px solid var(--input-border-light);
+            border-radius: 4px;
+            font-size: 0.8em;
+            background: var(--input-bg-light);
+            color: var(--text-primary-light);
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .input-group input {
+            border-color: var(--input-border-dark);
+            background: var(--input-bg-dark);
+            color: var(--text-primary-dark);
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #45a049;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .result-card {
+            background: var(--card-bg-light);
+            border-left: 4px solid var(--primary-color);
+            border-radius: 6px;
+            padding: 12px;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .result-card {
+            background: var(--card-bg-dark);
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .model-name {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .accuracy-badge {
+            background: var(--success-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 8px;
+            font-size: 0.8em;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-label {
+            color: var(--text-secondary-light);
+            font-size: 0.7em;
+            text-transform: uppercase;
+        }
+
+        body.dark-mode .metric-label {
+            color: var(--text-secondary-dark);
+        }
+
+        .metric-value {
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .prediction-section {
+            display: none;
+        }
+
+        .prediction-result {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .prediction-healthy {
+            background: rgba(76, 175, 80, 0.1);
+            border: 2px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        .prediction-parkinsons {
+            background: rgba(244, 67, 54, 0.1);
+            border: 2px solid var(--error-color);
+            color: var(--error-color);
+        }
+
+        .probability-bars {
+            margin: 10px 0;
+        }
+
+        .probability-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            gap: 10px;
+        }
+
+        .probability-label {
+            min-width: 80px;
+            font-size: 0.9em;
+        }
+
+        .probability-bar {
+            flex: 1;
+            height: 12px;
+            background: var(--input-border-light);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        body.dark-mode .probability-bar {
+            background: var(--input-border-dark);
+        }
+
+        .probability-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .probability-healthy {
+            background: var(--success-color);
+        }
+
+        .probability-parkinsons {
+            background: var(--error-color);
+        }
+
+        .probability-value {
+            min-width: 50px;
+            text-align: right;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .dataset-info {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        .dataset-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 0.8em;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 3px solid var(--input-border-light);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        body.dark-mode .spinner {
+            border-color: var(--input-border-dark);
+            border-top-color: var(--primary-color);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .status-message {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            text-align: center;
+        }
+
+        .status-success {
+            background: rgba(76, 175, 80, 0.1);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+
+        .status-error {
+            background: rgba(244, 67, 54, 0.1);
+            color: var(--error-color);
+            border: 1px solid var(--error-color);
+        }
+
+        #predictionModel {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--input-border-light);
+            background: var(--input-bg-light);
+            color: var(--text-primary-light);
+        }
+
+        body.dark-mode #predictionModel {
+            border-color: var(--input-border-dark);
+            background: var(--input-bg-dark);
+            color: var(--text-primary-dark);
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .right-panel {
+                order: -1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .model-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .input-grid {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                max-height: 250px;
+            }
+            
+            .control-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1>🧠 Parkinson's ML Detection</h1>
+                <p>Advanced AI analysis using multiple machine learning models</p>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">
+                <span id="themeIcon">🌙</span>
+            </button>
+        </div>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="card input-section">
+                    <div class="card-title">
+                        📊 Voice Features Input
+                    </div>
+                    
+                    <div class="control-buttons" style="margin-bottom: 15px;">
+                        <button class="btn btn-secondary" onclick="loadSampleData('healthy')">Healthy Sample</button>
+                        <button class="btn btn-secondary" onclick="loadSampleData('parkinsons')">Parkinson's Sample</button>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="fileInput" accept=".csv,.json,.txt" onchange="loadDataFromFile(event)">
+                            <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">Load File</button>
+                        </div>
+                        <button class="btn btn-secondary" onclick="clearInputs()">Clear All</button>
+                    </div>
+                    
+                    <div class="input-grid" id="inputGrid">
+                        <!-- Input fields will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="card results-section" id="modelResults">
+                    <div class="card-title">
+                        📈 Model Performance Results
+                    </div>
+                    <div class="loading" id="trainingLoading">
+                        <div class="spinner"></div>
+                        <p>Training models...</p>
+                    </div>
+                    <div class="results-grid" id="resultsGrid">
+                        <!-- Results will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="card prediction-section" id="predictionResults">
+                    <div class="card-title">
+                        🎯 Prediction Results
+                    </div>
+                    <div class="prediction-result" id="predictionResult">
+                        <!-- Prediction will be shown here -->
+                    </div>
+                    <div class="probability-bars" id="probabilityBars">
+                        <!-- Probability bars will be shown here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="card">
+                    <div class="card-title">
+                        🤖 Model Selection
+                    </div>
+                    <div class="model-grid" id="modelSelection">
+                        <!-- Model checkboxes will be populated by JavaScript -->
+                    </div>
+                    <button class="btn btn-success" onclick="trainModels()" style="width: 100%; margin-bottom: 10px;">
+                        Train Selected Models
+                    </button>
+                    <div style="margin-bottom: 15px;">
+                        <label for="predictionModel" style="display: block; margin-bottom: 5px; font-weight: 600;">Prediction Model:</label>
+                        <select id="predictionModel" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--input-border-light);">
+                            <option value="">Select trained model</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="predict()" style="width: 100%;">
+                        🔍 Predict
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">
+                        📊 Dataset Info
+                    </div>
+                    <div class="dataset-info" id="datasetInfo">
+                        <div class="dataset-stats">
+                            <div class="stat-item">
+                                <span>Total Samples:</span>
+                                <span id="totalSamples">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>Healthy:</span>
+                                <span id="healthySamples">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>Parkinson's:</span>
+                                <span id="parkinsonsSamples">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>Features:</span>
+                                <span id="featureCount">22</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>Training Set:</span>
+                                <span id="trainingSamples">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>Test Set:</span>
+                                <span id="testingSamples">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme management
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById('themeIcon');
+
+            body.classList.toggle('dark-mode');
+
+            if (body.classList.contains('dark-mode')) {
+                themeIcon.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                themeIcon.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const body = document.body;
+            const themeIcon = document.getElementById('themeIcon');
+
+            if (savedTheme === 'dark') {
+                body.classList.add('dark-mode');
+                themeIcon.textContent = '☀️';
+            } else {
+                themeIcon.textContent = '🌙';
+            }
+        }
+
+        // Global variables
+        let availableModels = [];
+        let trainedModels = [];
+        let features = [];
+        
+        const sampleData = {
+            healthy: {
+                'MDVP:Fo(Hz)': 197.076, 'MDVP:Fhi(Hz)': 206.896, 'MDVP:Flo(Hz)': 192.055,
+                'MDVP:Jitter(%)': 0.00289, 'MDVP:Jitter(Abs)': 0.00001, 'MDVP:RAP': 0.00166,
+                'MDVP:PPQ': 0.00168, 'Jitter:DDP': 0.00498, 'MDVP:Shimmer': 0.01098,
+                'MDVP:Shimmer(dB)': 0.097, 'Shimmer:APQ3': 0.00563, 'Shimmer:APQ5': 0.0068,
+                'MDVP:APQ': 0.00802, 'Shimmer:DDA': 0.01689, 'NHR': 0.00339, 'HNR': 26.775,
+                'RPDE': 0.422229, 'DFA': 0.741367, 'spread1': -7.3483, 'spread2': 0.177551,
+                'D2': 1.743867, 'PPE': 0.085569
+            },
+            parkinsons: {
+                'MDVP:Fo(Hz)': 119.992, 'MDVP:Fhi(Hz)': 157.302, 'MDVP:Flo(Hz)': 74.997,
+                'MDVP:Jitter(%)': 0.00784, 'MDVP:Jitter(Abs)': 0.00007, 'MDVP:RAP': 0.0037,
+                'MDVP:PPQ': 0.00554, 'Jitter:DDP': 0.01109, 'MDVP:Shimmer': 0.04374,
+                'MDVP:Shimmer(dB)': 0.426, 'Shimmer:APQ3': 0.02182, 'Shimmer:APQ5': 0.0313,
+                'MDVP:APQ': 0.02971, 'Shimmer:DDA': 0.06545, 'NHR': 0.02211, 'HNR': 21.033,
+                'RPDE': 0.414783, 'DFA': 0.815285, 'spread1': -4.813031, 'spread2': 0.266482,
+                'D2': 2.301442, 'PPE': 0.284654
+            }
+        };
+
+        // Initialize the application
+        async function initializeApp() {
+            loadTheme();
+            await loadAvailableModels();
+            await loadFeatures();
+            initializeInputs();
+            initializeModelSelection();
+        }
+
+        async function loadAvailableModels() {
+            try {
+                const response = await fetch('/models');
+                const data = await response.json();
+                availableModels = data.models;
+            } catch (error) {
+                console.error('Error loading models:', error);
+            }
+        }
+
+        async function loadFeatures() {
+            try {
+                const response = await fetch('/features');
+                const data = await response.json();
+                features = data.features;
+            } catch (error) {
+                console.error('Error loading features:', error);
+            }
+        }
+
+        function initializeInputs() {
+            const inputGrid = document.getElementById('inputGrid');
+            inputGrid.innerHTML = '';
+            
+            features.forEach(feature => {
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'input-group';
+                
+                const label = document.createElement('label');
+                label.textContent = feature;
+                label.setAttribute('for', feature);
+                
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.id = feature;
+                input.name = feature;
+                input.step = 'any';
+                input.placeholder = '0.0';
+                
+                inputGroup.appendChild(label);
+                inputGroup.appendChild(input);
+                inputGrid.appendChild(inputGroup);
+            });
+        }
+
+        function initializeModelSelection() {
+            const modelSelection = document.getElementById('modelSelection');
+            modelSelection.innerHTML = '';
+            
+            availableModels.forEach(model => {
+                const modelDiv = document.createElement('div');
+                modelDiv.className = 'model-checkbox';
+                modelDiv.onclick = () => toggleModelSelection(model, modelDiv);
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `model-${model}`;
+                checkbox.value = model;
+                
+                const label = document.createElement('label');
+                label.textContent = model;
+                label.setAttribute('for', `model-${model}`);
+                
+                modelDiv.appendChild(checkbox);
+                modelDiv.appendChild(label);
+                modelSelection.appendChild(modelDiv);
+            });
+        }
+
+        function toggleModelSelection(model, element) {
+            const checkbox = element.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            element.classList.toggle('selected', checkbox.checked);
+        }
+
+        function getSelectedModels() {
+            const checkboxes = document.querySelectorAll('#modelSelection input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        async function trainModels() {
+            const selectedModels = getSelectedModels();
+            
+            if (selectedModels.length === 0) {
+                showStatus('Please select at least one model to train.', 'error');
+                return;
+            }
+
+            const trainingLoading = document.getElementById('trainingLoading');
+            const modelResults = document.getElementById('modelResults');
+            const resultsGrid = document.getElementById('resultsGrid');
+            
+            trainingLoading.style.display = 'block';
+            modelResults.style.display = 'block';
+            resultsGrid.innerHTML = '';
+
+            try {
+                const response = await fetch('/train', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ models: selectedModels })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                trainedModels = Object.keys(data.results);
+                updatePredictionModelSelect();
+                displayResults(data);
+                updateDatasetInfo(data);
+                showStatus(`Successfully trained ${trainedModels.length} models!`, 'success');
+
+            } catch (error) {
+                showStatus('Error training models: ' + error.message, 'error');
+            } finally {
+                trainingLoading.style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            const resultsGrid = document.getElementById('resultsGrid');
+            resultsGrid.innerHTML = '';
+
+            Object.entries(data.results).forEach(([modelName, metrics]) => {
+                const resultCard = document.createElement('div');
+                resultCard.className = 'result-card';
+                
+                resultCard.innerHTML = `
+                    <div class="result-header">
+                        <span class="model-name">${modelName}</span>
+                        <span class="accuracy-badge">${(metrics.test_accuracy * 100).toFixed(1)}%</span>
+                    </div>
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-label">Train Acc</div>
+                            <div class="metric-value">${(metrics.train_accuracy * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Test Acc</div>
+                            <div class="metric-value">${(metrics.test_accuracy * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Precision</div>
+                            <div class="metric-value">${(metrics.test_precision * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Recall</div>
+                            <div class="metric-value">${(metrics.test_recall * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">F1 Score</div>
+                            <div class="metric-value">${(metrics.test_f1 * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">AUC</div>
+                            <div class="metric-value">${(metrics.test_auc * 100).toFixed(1)}%</div>
+                        </div>
+                    </div>
+                `;
+                
+                resultsGrid.appendChild(resultCard);
+            });
+        }
+
+        function updatePredictionModelSelect() {
+            const select = document.getElementById('predictionModel');
+            select.innerHTML = '<option value="">Select trained model</option>';
+            
+            trainedModels.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                select.appendChild(option);
+            });
+        }
+
+        function updateDatasetInfo(data) {
+            if (data.dataset_info) {
+                document.getElementById('totalSamples').textContent = data.dataset_info.total_samples || '-';
+                document.getElementById('healthySamples').textContent = data.dataset_info.healthy_samples || '-';
+                document.getElementById('parkinsonsSamples').textContent = data.dataset_info.parkinsons_samples || '-';
+            }
+            
+            document.getElementById('trainingSamples').textContent = data.training_samples || '-';
+            document.getElementById('testingSamples').textContent = data.testing_samples || '-';
+        }
+
+        async function predict() {
+            const selectedModel = document.getElementById('predictionModel').value;
+            
+            if (!selectedModel) {
+                showStatus('Please select a trained model for prediction.', 'error');
+                return;
+            }
+
+            const data = { model: selectedModel };
+            let hasEmptyFields = false;
+            
+            features.forEach(feature => {
+                const input = document.getElementById(feature);
+                if (input.value === '') {
+                    hasEmptyFields = true;
+                } else {
+                    data[feature] = parseFloat(input.value);
+                }
+            });
+            
+            if (hasEmptyFields) {
+                showStatus('Please fill in all voice feature fields or use sample data.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                displayPrediction(result);
+
+            } catch (error) {
+                showStatus('Error making prediction: ' + error.message, 'error');
+            }
+        }
+
+        function displayPrediction(result) {
+            const predictionResults = document.getElementById('predictionResults');
+            const predictionResult = document.getElementById('predictionResult');
+            const probabilityBars = document.getElementById('probabilityBars');
+            
+            // Show prediction result
+            const isHealthy = result.prediction === 0;
+            predictionResult.className = `prediction-result ${isHealthy ? 'prediction-healthy' : 'prediction-parkinsons'}`;
+            predictionResult.innerHTML = `
+                <h3>${isHealthy ? '✅ Healthy' : '⚠️ Parkinson\'s Detected'}</h3>
+                <p>Model: ${result.model}</p>
+                <p>Confidence: ${(result.confidence * 100).toFixed(1)}%</p>
+            `;
+            
+            // Show probability bars
+            probabilityBars.innerHTML = `
+                <div class="probability-item">
+                    <span class="probability-label">Healthy:</span>
+                    <div class="probability-bar">
+                        <div class="probability-fill probability-healthy" style="width: ${result.probability.healthy * 100}%"></div>
+                    </div>
+                    <span class="probability-value">${(result.probability.healthy * 100).toFixed(1)}%</span>
+                </div>
+                <div class="probability-item">
+                    <span class="probability-label">Parkinson's:</span>
+                    <div class="probability-bar">
+                        <div class="probability-fill probability-parkinsons" style="width: ${result.probability.parkinsons * 100}%"></div>
+                    </div>
+                    <span class="probability-value">${(result.probability.parkinsons * 100).toFixed(1)}%</span>
+                </div>
+            `;
+            
+            predictionResults.style.display = 'block';
+        }
+
+        function loadSampleData(type) {
+            const data = sampleData[type];
+            features.forEach(feature => {
+                const input = document.getElementById(feature);
+                if (input && data[feature] !== undefined) {
+                    input.value = data[feature];
+                }
+            });
+            showStatus(`Loaded ${type} sample data`, 'success');
+        }
+
+        function clearInputs() {
+            features.forEach(feature => {
+                const input = document.getElementById(feature);
+                if (input) {
+                    input.value = '';
+                }
+            });
+            
+            // Clear results
+            document.getElementById('modelResults').style.display = 'none';
+            document.getElementById('predictionResults').style.display = 'none';
+            
+            showStatus('All inputs cleared', 'success');
+        }
+
+        function loadDataFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    let data = {};
+
+                    if (file.name.endsWith('.json')) {
+                        data = JSON.parse(content);
+                    } else if (file.name.endsWith('.csv')) {
+                        data = parseCSV(content);
+                    } else if (file.name.endsWith('.txt')) {
+                        data = parseDelimited(content);
+                    }
+
+                    let loadedCount = 0;
+                    features.forEach(feature => {
+                        const input = document.getElementById(feature);
+                        if (input && data[feature] !== undefined) {
+                            input.value = data[feature];
+                            loadedCount++;
+                        }
+                    });
+
+                    if (loadedCount > 0) {
+                        showStatus(`Loaded ${loadedCount} features from ${file.name}`, 'success');
+                    } else {
+                        showStatus('No matching features found in file', 'error');
+                    }
+                } catch (error) {
+                    showStatus('Error reading file: ' + error.message, 'error');
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+        function parseCSV(content) {
+            const lines = content.trim().split('\n');
+            if (lines.length < 2) throw new Error('CSV must have header and data rows');
+
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const values = lines[1].split(',').map(v => v.trim().replace(/"/g, ''));
+
+            const data = {};
+            headers.forEach((header, index) => {
+                if (values[index] !== undefined) {
+                    data[header] = parseFloat(values[index]) || values[index];
+                }
+            });
+
+            return data;
+        }
+
+        function parseDelimited(content) {
+            const lines = content.trim().split('\n');
+            const data = {};
+
+            lines.forEach(line => {
+                const parts = line.split(/[,\t]/).map(p => p.trim());
+                if (parts.length >= 2) {
+                    const key = parts[0].replace(/"/g, '');
+                    const value = parts[1].replace(/"/g, '');
+                    data[key] = parseFloat(value) || value;
+                }
+            });
+
+            return data;
+        }
+
+        function showStatus(message, type) {
+            // Remove existing status messages
+            const existing = document.querySelector('.status-message');
+            if (existing) {
+                existing.remove();
+            }
+
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.textContent = message;
+
+            // Add to the first card in right panel
+            const rightPanel = document.querySelector('.right-panel .card');
+            rightPanel.appendChild(statusDiv);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (statusDiv.parentNode) {
+                    statusDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Initialize the application when the page loads
+        window.addEventListener('load', initializeApp);
+    </script>
+</body>
+</html>
